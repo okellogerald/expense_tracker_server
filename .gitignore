@@ -2,5 +2,8 @@
 .dart_tool/
 .packages
 
+#api-keys file
+lib/keys.dart
+
 # Conventional directory for build output.
 build/

@@ -1,16 +1,11 @@
+import 'package:example_server/routes_handlers/user_route_handler.dart';
 import 'package:shelf/shelf.dart';
 
-import 'routes_handlers/root_handler.dart';
-import 'routes_handlers/user_route_handler.dart';
-
-//dart run bin/server.dart
+part 'route_managers/user_routes_manager.dart';
 
 Future<Response> router(Request request) async {
-  switch (request.url.path) {
-    case '':
-      return rootHandler(request);
-    case 'user':
-      return await getUser(request);
-  }
-  return Response.ok('Unknown endpoint: ${request.url.path}');
+  final path = request.url.path;
+  if (path.isEmpty) return Response.ok('Hi! Trust you\'re doing great');
+  if (path.startsWith('user')) return handleUserRoutes(request);
+  return Response.ok('Unknown endpoint: $path');
 }
