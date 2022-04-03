@@ -1,119 +1,71 @@
 import 'dart:convert';
 
 import 'package:example_server/database.dart';
-import 'package:example_server/utils/utils.dart';
 import 'package:http/http.dart' as http;
 
+import '../keys.dart';
+import '../utils/utils.dart';
 import 'source.dart';
+
+part 'otp_user_route_handler_extension.dart';
 
 Future<Response> getUser(Request request) async {
   final params = request.requestedUri.queryParameters;
-  final errors = Validator.validateParams(params, getUserFields);
-  if (errors.isNotEmpty) return Response.ok('$errors');
+  var errors = Validator.validateParams(params, getUserParams);
+  if (errors.isNotEmpty) return errorResponse(errors);
 
-  final query = {'email': params['email']};
+  final values = await Validator.validateBody(request, userSignInFields);
+  errors = values['errors'];
+  if (errors.isNotEmpty) return errorResponse(errors);
+
+  final query = (values['body'] as Map<String, dynamic>)..addAll(params);
   final response = await Database.match(query);
-  if (response.hasError) {
-    return Response.ok(response.error!.message);
-  }
-  return Response.ok(json.encode((response.data as List).first));
+  if (response.hasError) return errorResponse(response.error!.message);
+  return userResponse(response.data);
 }
 
 Future<Response> createUser(Request request) async {
-  final body = await getBody(request);
-  final errors = Validator.validateBody(body, createUserFields);
-  if (errors.isNotEmpty) return Response.ok('$errors');
+  final values = await Validator.validateBody(request, createUserFields);
+  final errors = values['errors'], body = values['body'];
+  if (errors.isNotEmpty) return errorResponse(errors);
 
   //checking if the user already exists
   final query = {'email': body['email']};
   var response = await Database.match(query);
-  if (response.hasError) {
-    return Response.ok(response.error!.message);
-  }
+  if (response.hasError) return errorResponse(response.error!.message, 200);
   if (response.data.isNotEmpty) {
-    return Response.forbidden('User already exists');
+    return errorResponse('User with the same email address already exists');
   }
 
   //else add user
   response = await Database.add(userTable, body);
-  if (response.hasError) {
-    return Response.ok(response.error!.message);
-  }
-  print(response.data);
-  return Response.ok(json.encode((response.data as List).first));
+  if (response.hasError) return errorResponse(response.error?.message, 200);
+  return userResponse(response.data, 201);
 }
 
-Future<Response> sendOTP(Request request) async {
-  final body = await getBody(request);
-  final errors = Validator.validateBody(body, justEmailOnBody);
-  if (errors.isNotEmpty) return Response.ok('$errors');
+///has to pass whole user info except email which is to be passed as a parameter
+Future<Response> updateUser(Request request) async {
+  final params = request.requestedUri.queryParameters;
+  var errors = Validator.validateParams(params, getUserParams);
+  if (errors.isNotEmpty) return errorResponse(errors);
 
-  final email = body['email']!;
-  final otp = Utils.generateOTP();
+  final values = await Validator.validateBody(request, updateUserFields);
+  errors = values['errors'];
+  final body = values['body'];
+  if (errors.isNotEmpty) return errorResponse(errors);
+  body['email'] = params['email']!;
 
-  ///checking if otp is already provided for this email.
-  var response = await Database.match({'email': email}, table: otpTable);
-  if (response.hasError) {
-    return Response.ok(response.error!.message);
-  }
-  if ((response.data as List).isNotEmpty) {
-    //email exists
-    response = await Database.update(otpTable, {"email": email, "otp": otp});
-    if (response.hasError) {
-      return Response.ok(response.error!.message);
-    }
-  } else {
-    //email does not exist
-    response = await Database.add(otpTable, {"email": email, "otp": otp});
-    if (response.hasError) {
-      return Response.ok(response.error!.message);
-    }
-  }
-
-  ///sending otp mail
-  try {
-    await _sendOTPEmail(email, otp);
-    return Response.ok('succeeded creating otp & sending the email');
-  } catch (e) {
-    return Response.ok('Error while sending email: $e');
-  }
+  var response = await Database.update(otpTable, body);
+  if (response.hasError) return errorResponse(response.error?.message, 200);
+  return userResponse(response.data, 201);
 }
 
-Future<Response> validateOTP(Request request) async {
-  final body = await getBody(request);
-  final errors = Validator.validateBody(body, validateOTPFields);
-  if (errors.isNotEmpty) return Response.ok('$errors');
+Future<Response> deleteUser(Request request) async {
+  final params = request.requestedUri.queryParameters;
+  final errors = Validator.validateParams(params, getUserParams);
+  if (errors.isNotEmpty) return errorResponse(errors);
 
-  final response = await Database.match(body, table: otpTable);
-  if (response.hasError) {
-    return Response.ok(response.error!.message);
-  }
-  if ((response.data as List).isEmpty) return Response.notFound('INVALID OTP');
-  return Response.ok('Success');
-}
-
-Future<void> _sendOTPEmail(String email, String otp) async {
-  final headers = {
-    'Accept': 'application/json',
-    'Content-type': 'application/json'
-  };
-
-  var content = '''
-Content-Type: text/html; charset="us-ascii"
-MIME-Version: 1.0
-Content-Transfer-Encoding: 7bit
-to: $email
-from: okellogeralddev@gmail.com
-subject: Checking if mail works
-Use this OTP to verify your email
-$otp''';
-
-  var bytes = utf8.encode(content);
-  var base64 = base64Encode(bytes);
-  var body = json.encode({'raw': base64});
-
-  final url = "https://www.googleapis.com/gmail/v1/users/$email/messages/send";
-  final response =
-      await http.post(Uri.parse(url), headers: headers, body: body);
-  print(response.body);
+  var response = await Database.delete(otpTable, params['email']!);
+  if (response.hasError) return errorResponse(response.error?.message, 200);
+  return userResponse(response.data);
 }

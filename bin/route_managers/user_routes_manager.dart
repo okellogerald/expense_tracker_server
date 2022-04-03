@@ -1,15 +1,23 @@
 part of '../router.dart';
 
 Future<Response> handleUserRoutes(Request request) async {
-  switch (request.url.path) {
-    case 'user':
-      return await getUser(request);
-    case 'user/create':
-      return await createUser(request);
-    case 'user/sendOTP':
-      return await sendOTP(request);
-    case 'user/validateOTP':
-      return await validateOTP(request);
+  final path = request.url.path;
+  if (request.mimeType != "application/x-www-form-urlencoded") {
+    return unsupportedContentType();
   }
-  return Response.ok('unknown root: ${request.url.path}');
+
+  if (path == 'user') {
+    if (request.isPost) return await getUser(request);
+  } else if (path == 'user/create') {
+    if (request.isPost) return await createUser(request);
+  } else if (path == 'user/update') {
+    if (request.isPut) return await updateUser(request);
+  } else if (path == 'user/delete') {
+    if (request.isDelete) return await deleteUser(request);
+  } else if (path == 'user/sendOTP') {
+    if (request.isPost) return await sendOTP(request);
+  } else if (path == 'user/validateOTP') {
+    if (request.isPost) return await validateOTP(request);
+  }
+  return methodNotAllowedResponse(request);
 }

@@ -25,4 +25,7 @@ class Database {
         .eq('email', email)
         .execute();
   }
+
+  static Future<PostgrestResponse> delete(String table, String email) async =>
+      await client.from(table).delete().eq('email', email).execute();
 }
