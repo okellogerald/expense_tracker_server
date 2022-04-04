@@ -24,14 +24,6 @@ Response methodNotAllowedResponse(Request request) {
   return Response(400, body: json.encode(data), headers: headers);
 }
 
-Response unsupportedContentType() {
-  final data = {
-    "error":
-        "Unsupported content type. Set Content-Type as application/x-www-form-urlencoded in request headers"
-  };
-  return Response(405, body: json.encode(data), headers: headers);
-}
-
 Response notFoundResponse(Request request) {
   final data = {"error": "Unknown Route: /${request.url.path}"};
   return Response.notFound(json.encode(data), headers: headers);

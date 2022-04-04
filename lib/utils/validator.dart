@@ -6,7 +6,8 @@ const createUserFields = <String, Type>{
   'email': String,
   'password': String,
   'signup_option': String,
-  'backup_option': String
+  'backup_option': String,
+  'recovery_email': String
 };
 
 const userSignInFields = <String, Type>{'password': String};
@@ -17,7 +18,8 @@ const updateUserFields = <String, Type>{
   'backup_option': String,
   'currency': int,
   'display_name': String,
-  'photo_url': String
+  'photo_url': String,
+  'recovery_email': String
 };
 
 const justEmailOnBody = <String, Type>{'email': String};
@@ -26,18 +28,30 @@ const validateOTPFields = <String, Type>{'email': String, 'otp': String};
 
 const getUserParams = <String>['email'];
 
+const canBeNullFieldsList = ['recovery_email', 'photo_url'];
+
 class Validator {
   static Future<Map<String, dynamic>> validateBody(
       Request request, Map<String, Type> fields) async {
+    if (request.mimeType != "application/x-www-form-urlencoded") {
+      return {'errors': unsupportedMimeTypeErrorMessage, 'body': {}};
+    }
+
     final errors = <String, String>{};
     final body = Map.from(await _getBody(request));
 
     for (int index = 0; index < fields.length; index++) {
       final requiredValue = fields.keys.toList()[index];
       final bodyValue = body[requiredValue];
-      if (bodyValue == null) {
+      //recovery email & photo_url can be null
+      if (bodyValue == null &&
+          requiredValue != 'recovery_email' &&
+          requiredValue != 'photo_url') {
         errors[requiredValue] = '$requiredValue is required';
       } else {
+        if (requiredValue == 'recovery_email' || requiredValue == 'photo_url') {
+          continue;
+        }
         //value exists just checks for the correct type of each field.
         final requiredType = fields.values.toList()[index];
         if (bodyValue.runtimeType != requiredType) {
@@ -87,6 +101,11 @@ class Validator {
   static Future<Map<String, String>> _getBody(Request request) async {
     var content = await utf8.decoder.bind(request.read()).join();
     var body = Uri(query: content).queryParameters;
+    print('the body');
+    print(body);
     return body;
   }
 }
+
+const unsupportedMimeTypeErrorMessage =
+    'Unsupported content type. Set Content-Type as application/x-www-form-urlencoded in request headers';
