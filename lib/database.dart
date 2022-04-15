@@ -1,6 +1,6 @@
 import 'package:supabase/supabase.dart';
 
-import 'keys.dart';
+import 'api_secrets.dart';
 import 'routes_handlers/source.dart';
 
 class Database {

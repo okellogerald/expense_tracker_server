@@ -9,7 +9,7 @@ Future<Map<String, dynamic>> validateBody(
   }
 
   final errors = <String, String>{};
-  final body = Map.from(await _getBody(request));
+  final body = Map<String, dynamic>.from(await _getBody(request));
 
   for (int index = 0; index < fields.length; index++) {
     final requiredValue = fields.keys.toList()[index];
@@ -39,7 +39,7 @@ Future<Map<String, dynamic>> validateBody(
   return {'errors': errors, 'body': body};
 }
 
-Map<String, dynamic> validateParams(
+Map<String, String> validateParams(
     Map<String, String> body, List<String> fields) {
   final errors = <String, String>{};
   for (int index = 0; index < fields.length; index++) {

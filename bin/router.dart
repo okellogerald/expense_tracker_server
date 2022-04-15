@@ -1,4 +1,4 @@
-import 'package:example_server/response_handler.dart';
+import 'package:example_server/response_handler/response_handler.dart';
 import 'package:example_server/routes_handlers/user_route_handler.dart';
 import 'package:shelf/shelf.dart';
 
